@@ -28,3 +28,17 @@ module "networking" {
   private_endpoint_subnet = var.private_endpoint_subnet
   tags                    = local.common_tags
 }
+
+module "aks" {
+  source = "../../modules/aks"
+
+  cluster_name        = "aks-${local.name_prefix}"
+  location            = var.location
+  resource_group_name = module.resource_group.name
+  dns_prefix          = "aks-${local.name_prefix}"
+
+  system_subnet_id   = module.networking.aks_system_subnet_id
+  workload_subnet_id = module.networking.aks_workload_subnet_id
+
+  tags = local.common_tags
+}
