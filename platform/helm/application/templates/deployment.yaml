@@ -15,11 +15,25 @@ spec:
         {{- include "platform-application.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "platform-application.serviceAccountName" . }}
+      
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
 
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
 
           ports:
             - name: http
