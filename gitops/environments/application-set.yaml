@@ -11,7 +11,7 @@ spec:
           - environment: dev
             namespace: demo-app-dev
             valuesFile: values-dev.yaml
-            repoRevision: develop
+            repoRevision: feature/project-bootstrap
 
           - environment: staging
             namespace: demo-app-staging
