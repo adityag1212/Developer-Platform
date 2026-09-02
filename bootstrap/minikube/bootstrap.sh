@@ -87,8 +87,11 @@ kubectl wait \
 echo
 echo "[7/7] Registering GitOps ApplicationSet..."
 
+# kubectl apply \
+#   -f "${REPO_URL}/${APPLICATION_SET_PATH}?ref=develop"
+
 kubectl apply \
-  -f "${REPO_URL}/${APPLICATION_SET_PATH}?ref=develop"
+  -f "https://raw.githubusercontent.com/Adityag1212/Developer-Platform/feature/project-bootstrap/gitops/environments/application-set.yaml"
 
 echo
 echo "========================================"
