@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   promote:
-    name: Update Dev Image
+    name: Promote Image to Dev
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
@@ -21,31 +21,52 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env:
+      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+
     steps:
-      - name: Checkout
+      - name: Checkout develop
         uses: actions/checkout@v4
         with:
           ref: develop
           fetch-depth: 0
 
-      - name: Update image tag
-        env:
-          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      - name: Update development image tag
         run: |
-          sed -i \
-            "s/tag: \"dev\"/tag: \"${IMAGE_TAG}\"/" \
-            gitops/applications/demo-app/values-dev.yaml
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path("gitops/applications/demo-app/values-dev.yaml")
+          content = path.read_text()
+
+          content, count = re.subn(
+              r'(?m)^(\s*tag:\s*).*$',
+              rf'\g<1>"{os.environ["IMAGE_TAG"]}"',
+              content,
+              count=1,
+          )
+
+          if count != 1:
+              raise SystemExit("Could not find image tag in values-dev.yaml")
+
+          path.write_text(content)
+          PY
 
       - name: Commit GitOps update
-        env:
-          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add gitops/applications/demo-app/values-dev.yaml
 
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then
+            echo "No GitOps changes detected."
+            exit 0
+          fi
 
-          git commit -m "chore: promote demo-service ${IMAGE_TAG}"
+          git commit \
+            -m "chore: promote demo-service ${IMAGE_TAG}"
+
           git push origin develop

@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image SHA to promote"
+        description: "Container image SHA to promote"
         required: true
         type: string
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   promote:
@@ -17,19 +18,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: develop
+          ref: main
           fetch-depth: 0
+
+      - name: Create promotion branch
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          git switch -c "promote/staging-${IMAGE_TAG}"
 
       - name: Update staging image
         env:
           IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
-          sed -i \
-            "s/tag: \"[^\"]*\"/tag: \"${IMAGE_TAG}\"/" \
-            gitops/applications/demo-app/values-staging.yaml
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path("gitops/applications/demo-app/values-staging.yaml")
+          content = path.read_text()
+
+          content, count = re.subn(
+              r'(?m)^(\s*tag:\s*).*$',
+              rf'\g<1>"{os.environ["IMAGE_TAG"]}"',
+              content,
+              count=1,
+          )
+
+          if count != 1:
+              raise SystemExit(
+                  "Could not find image tag in values-staging.yaml"
+              )
+
+          path.write_text(content)
+          PY
 
       - name: Commit promotion
         env:
@@ -40,7 +66,20 @@ jobs:
 
           git add gitops/applications/demo-app/values-staging.yaml
 
-          git diff --cached --quiet && exit 0
+          git commit \
+            -m "chore: promote demo-service ${IMAGE_TAG} to staging"
 
-          git commit -m "chore: promote demo-service ${IMAGE_TAG} to staging"
-          git push origin develop
+      - name: Push promotion branch
+        run: |
+          git push origin HEAD
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          gh pr create \
+            --base main \
+            --head "promote/staging-${IMAGE_TAG}" \
+            --title "chore: promote demo-service ${IMAGE_TAG} to staging" \
+            --body "Promotes demo-service image ${IMAGE_TAG} from development to staging."
