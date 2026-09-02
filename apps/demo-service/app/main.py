@@ -3,7 +3,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
     title="Developer Platform Demo Service",
-    version="1.0.0",
+    version="1.0.1",
 )
 
 
