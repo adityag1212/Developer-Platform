@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/adityag1212/demo-service
-  tag: "REPLACE_ME"
+  tag: "ed3dfa8af31f5551cb6355b13c27c3d7fab6f10c"
   pullPolicy: IfNotPresent
 
 service:
