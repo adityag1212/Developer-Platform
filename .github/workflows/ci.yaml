@@ -1,0 +1,57 @@
+name: Application CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/demo-service/**"
+      - "platform/helm/**"
+      - "gitops/**"
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - "apps/demo-service/**"
+      - "platform/helm/**"
+      - "gitops/**"
+
+permissions:
+  contents: read
+
+jobs:
+  application-tests:
+    name: Application Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/demo-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate application
+        run: python -m compileall app
+
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm chart
+        run: helm lint platform/helm/application

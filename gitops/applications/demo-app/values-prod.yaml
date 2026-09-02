@@ -1,4 +1,4 @@
-replicaCount: 1
+replicaCount: 3
 
 image:
   repository: ghcr.io/adityag1212/demo-service
@@ -13,22 +13,25 @@ service:
 
 resources:
   requests:
-    cpu: 50m
-    memory: 64Mi
-  limits:
     cpu: 250m
     memory: 256Mi
+  limits:
+    cpu: 1
+    memory: 1Gi
 
 health:
   path: /health
-  initialDelaySeconds: 5
+  initialDelaySeconds: 10
   periodSeconds: 10
 
 ingress:
   enabled: false
 
 autoscaling:
-  enabled: false
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
 
 networkPolicy:
   enabled: true

@@ -1,0 +1,51 @@
+name: Promote Image
+
+on:
+  workflow_run:
+    workflows:
+      - Container
+    types:
+      - completed
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  promote:
+    name: Update Dev Image
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'develop'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Update image tag
+        env:
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          sed -i \
+            "s/tag: \"dev\"/tag: \"${IMAGE_TAG}\"/" \
+            gitops/applications/demo-app/values-dev.yaml
+
+      - name: Commit GitOps update
+        env:
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add gitops/applications/demo-app/values-dev.yaml
+
+          git diff --cached --quiet && exit 0
+
+          git commit -m "chore: promote demo-service ${IMAGE_TAG}"
+          git push origin develop

@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-applications
+  namespace: argocd
+
+spec:
+  generators:
+    - list:
+        elements:
+          - environment: dev
+            namespace: demo-app-dev
+            valuesFile: values-dev.yaml
+            repoRevision: develop
+
+          - environment: staging
+            namespace: demo-app-staging
+            valuesFile: values-staging.yaml
+            repoRevision: main
+
+          - environment: prod
+            namespace: demo-app-prod
+            valuesFile: values-prod.yaml
+            repoRevision: main
+
+  template:
+    metadata:
+      name: "demo-app-{{environment}}"
+
+    spec:
+      project: default
+
+      sources:
+        - repoURL: https://github.com/adityag1212/Developer-Platform.git
+          targetRevision: "{{repoRevision}}"
+          path: platform/helm/application
+
+          helm:
+            valueFiles:
+              - "$values/gitops/applications/demo-app/{{valuesFile}}"
+
+        - repoURL: https://github.com/adityag1212/Developer-Platform.git
+          targetRevision: "{{repoRevision}}"
+          ref: values
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{namespace}}"
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+
+        syncOptions:
+          - CreateNamespace=true

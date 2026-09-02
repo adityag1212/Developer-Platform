@@ -4,6 +4,7 @@ image:
   repository: ""
   tag: ""
   pullPolicy: IfNotPresent
+  pullSecrets: []
 
 service:
   enabled: true
@@ -21,13 +22,38 @@ resources:
 
 health:
   path: /health
+  readinessPath: /ready
+  livenessPath: /health
   initialDelaySeconds: 10
   periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+env: []
+
+podAnnotations: {}
+
+podLabels: {}
+
+terminationGracePeriodSeconds: 30
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 25%
+    maxSurge: 25%
+
+topologySpreadConstraints: []
 
 ingress:
   enabled: false
   className: nginx
+  annotations: {}
   host: ""
+  path: /
+  pathType: Prefix
+  tls: []
 
 autoscaling:
   enabled: true
@@ -38,6 +64,21 @@ autoscaling:
 serviceAccount:
   create: true
   name: ""
+  annotations: {}
 
 networkPolicy:
   enabled: true
+
+  ingress:
+    - from:
+        - namespaceSelector: {}
+
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress: []
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
